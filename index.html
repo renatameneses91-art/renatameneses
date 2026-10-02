@@ -1,0 +1,419 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Colab Fit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: duo scoreboard (two person cards) → shared variation chart → log + history */
+:root {
+  --bg: #f4f6f2;
+  --surface: #fdfdfb;
+  --ink: #141714;
+  --ink-2: #4c524b;
+  --muted: #7d827a;
+  --grid: #e3e6df;
+  --axis: #c3c7bd;
+  --ring: rgba(20, 23, 20, .10);
+  --re: #2a78d6;
+  --abe: #eb6834;
+  --down: #006300;
+  --up: #9c4a14;
+  --accent: #1d5a45;
+  --accent-ink: #ffffff;
+  --wash: rgba(29, 90, 69, .08);
+  --font-display: "Bricolage Grotesque", "Figtree", system-ui, sans-serif;
+  --font-body: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e100e; --surface: #191b18; --ink: #f2f3ee; --ink-2: #c2c6bb; --muted: #8b9087;
+    --grid: #2b2e29; --axis: #3b3f38; --ring: rgba(255, 255, 255, .10);
+    --re: #3987e5; --abe: #d95926; --down: #2fbf4a; --up: #e8a06a;
+    --accent: #63c39b; --accent-ink: #0b1a13; --wash: rgba(99, 195, 155, .10);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e100e; --surface: #191b18; --ink: #f2f3ee; --ink-2: #c2c6bb; --muted: #8b9087;
+  --grid: #2b2e29; --axis: #3b3f38; --ring: rgba(255, 255, 255, .10);
+  --re: #3987e5; --abe: #d95926; --down: #2fbf4a; --up: #e8a06a;
+  --accent: #63c39b; --accent-ink: #0b1a13; --wash: rgba(99, 195, 155, .10);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { color-scheme: light; }
+body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 16px; line-height: 1.5; }
+.wrap { max-width: 1120px; margin: 0 auto; padding-inline: 20px; padding-block: 32px 56px; display: grid; gap: 28px; }
+
+header { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px; }
+.eyebrow { font-size: 13px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); margin: 0 0 4px; }
+h1 { font-family: var(--font-display); font-weight: 800; font-size: clamp(40px, 7vw, 60px); line-height: 1; margin: 0; letter-spacing: -.02em; }
+.sub { margin: 8px 0 0; color: var(--ink-2); font-size: 17px; }
+.together { display: grid; gap: 2px; padding: 12px 16px; border-radius: 12px; background: var(--wash); min-width: 200px; }
+.together .lbl { font-size: 13px; font-weight: 600; color: var(--ink-2); letter-spacing: .04em; text-transform: uppercase; }
+.together .val { font-family: var(--font-display); font-weight: 800; font-size: 28px; line-height: 1.1; }
+.together .note { font-size: 13px; color: var(--muted); }
+
+h2 { font-family: var(--font-display); font-weight: 600; font-size: 22px; margin: 0; text-wrap: balance; }
+.hint { color: var(--muted); font-size: 14px; margin: 4px 0 0; max-width: 65ch; }
+
+.duo { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+.card { background: var(--surface); border: 1px solid var(--ring); border-radius: 16px; padding: 20px; display: grid; gap: 12px; min-width: 0; }
+.who { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 20px; }
+.dot { width: 12px; height: 12px; border-radius: 50%; flex: none; }
+.since { margin-left: auto; font-size: 13px; font-weight: 500; color: var(--muted); }
+.kg { font-family: var(--font-display); font-weight: 800; font-size: clamp(44px, 6vw, 56px); line-height: 1; letter-spacing: -.02em; }
+.kg small { font-family: var(--font-body); font-size: 20px; font-weight: 600; color: var(--ink-2); margin-left: 4px; letter-spacing: 0; }
+.delta { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; font-size: 16px; }
+.delta.down { color: var(--down); }
+.delta.up { color: var(--up); }
+.delta.flat { color: var(--ink-2); }
+.delta .pct { font-weight: 500; color: var(--ink-2); }
+.facts { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding-top: 12px; border-top: 1px solid var(--grid); }
+.fact .l { font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.fact .v { font-weight: 600; font-size: 15px; }
+.fact .v .delta { font-size: 14px; }
+
+.panel { background: var(--surface); border: 1px solid var(--ring); border-radius: 16px; padding: 20px; display: grid; gap: 16px; min-width: 0; }
+.legend { display: flex; flex-wrap: wrap; gap: 16px; font-size: 14px; color: var(--ink-2); font-weight: 600; }
+.legend span { display: inline-flex; align-items: center; gap: 8px; }
+.legend i { width: 18px; height: 3px; border-radius: 2px; display: inline-block; }
+
+.chart { position: relative; width: 100%; min-width: 0; }
+.chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.chart text { font-family: var(--font-body); }
+.tip { position: absolute; pointer-events: none; background: var(--surface); border: 1px solid var(--ring); box-shadow: 0 6px 20px rgba(0,0,0,.12); border-radius: 10px; padding: 8px 12px; font-size: 13px; min-width: 140px; z-index: 2; }
+.tip b { display: block; font-size: 13px; color: var(--ink-2); margin-bottom: 4px; }
+.tip .row { display: flex; align-items: center; gap: 8px; justify-content: space-between; font-variant-numeric: tabular-nums; }
+.tip .row span:first-child { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-2); }
+
+.split { display: grid; grid-template-columns: minmax(260px, 1fr) minmax(0, 2fr); gap: 20px; align-items: start; }
+@media (max-width: 760px) { .split { grid-template-columns: 1fr; } }
+
+form { display: grid; gap: 14px; }
+.seg { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 4px; background: var(--bg); border-radius: 12px; border: 1px solid var(--ring); }
+.seg input { position: absolute; opacity: 0; pointer-events: none; }
+.seg label { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 10px; border-radius: 9px; font-weight: 700; cursor: pointer; color: var(--ink-2); }
+.seg input:checked + label { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+.seg input:focus-visible + label { outline: 2px solid var(--accent); outline-offset: 2px; }
+.field { display: grid; gap: 6px; }
+.field label { font-size: 13px; font-weight: 600; color: var(--ink-2); }
+.field input { font: inherit; font-size: 17px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--axis); background: var(--surface); color: var(--ink); width: 100%; }
+.field input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; border-color: transparent; }
+.btn { font: inherit; font-weight: 700; font-size: 16px; padding: 12px 16px; border-radius: 10px; border: 0; background: var(--accent); color: var(--accent-ink); cursor: pointer; }
+.btn:hover { filter: brightness(1.08); }
+.btn:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.btn[disabled] { opacity: .5; cursor: default; }
+.msg { font-size: 14px; min-height: 1.5em; margin: 0; }
+.msg.ok { color: var(--down); }
+.msg.err { color: var(--up); }
+
+.tablewrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 15px; font-variant-numeric: tabular-nums; }
+th { text-align: left; font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); padding: 8px 10px; border-bottom: 1px solid var(--axis); white-space: nowrap; }
+td { padding: 10px; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+td.num, th.num { text-align: right; }
+td .who { font-size: 15px; gap: 8px; }
+td .dot { width: 9px; height: 9px; }
+.x { font: inherit; font-size: 13px; font-weight: 600; background: none; border: 1px solid transparent; color: var(--muted); padding: 4px 8px; border-radius: 8px; cursor: pointer; }
+.x:hover { border-color: var(--ring); color: var(--ink); }
+.x.confirm { color: var(--up); border-color: var(--up); }
+.x:focus-visible { outline: 2px solid var(--accent); }
+
+.empty { color: var(--muted); padding: 24px 0; text-align: center; }
+.how { margin: 0; padding-left: 20px; display: grid; gap: 10px; color: var(--ink-2); }
+.how code, .codeblk { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 13px; }
+.how code { background: var(--bg); padding: 1px 6px; border-radius: 6px; border: 1px solid var(--ring); }
+.codeblk { display: block; background: var(--bg); border: 1px solid var(--ring); border-radius: 10px; padding: 10px 12px; overflow-x: auto; white-space: pre; color: var(--ink); margin-top: 6px; }
+[hidden] { display: none !important; }
+.panel > *, .how, .how li { min-width: 0; }
+@media (max-width: 520px) {
+  .panel, .card { padding: 16px; }
+  td, th { padding: 8px 6px; }
+  table { font-size: 14px; }
+  .delta { font-size: 14px; }
+}
+img { max-width: 100%; }
+@media (prefers-reduced-motion: no-preference) { .card, .panel { transition: border-color .2s; } }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div>
+      <p class="eyebrow">Desafio em dupla</p>
+      <h1>Colab Fit</h1>
+      <p class="sub">O peso de Rê e Abê, pesagem a pesagem.</p>
+    </div>
+    <div class="together" id="together">
+      <span class="lbl">Juntos</span>
+      <span class="val">—</span>
+      <span class="note">desde a primeira pesagem de cada um</span>
+    </div>
+  </header>
+
+  <section class="duo" id="duo" aria-label="Resumo por pessoa">
+    <div class="card"><p class="empty">Carregando pesagens…</p></div>
+  </section>
+
+  <section class="panel" aria-labelledby="t-var">
+    <div>
+      <h2 id="t-var">Variação desde a primeira pesagem</h2>
+      <p class="hint">Cada linha parte do peso inicial da pessoa (0 kg). Abaixo de zero é peso perdido, e os dois ficam comparáveis na mesma escala.</p>
+    </div>
+    <div class="legend" id="legend"></div>
+    <div class="chart" id="chart-var"></div>
+  </section>
+
+  <section class="split">
+    <div class="panel" aria-labelledby="t-add">
+      <h2 id="t-add">Nova pesagem</h2>
+      <ol class="how">
+        <li>No repositório do GitHub, abra o arquivo <code>pesagens.json</code> e clique no lápis (editar).</li>
+        <li>Copie uma linha e ajuste pessoa, data e peso. Use <code>re</code> ou <code>abe</code>, data no formato ano-mês-dia e ponto no decimal:
+          <span class="codeblk">{ "pessoa": "re", "data": "2026-10-09", "kg": 69.20 },</span></li>
+        <li>Toda linha leva vírgula no final, menos a última da lista.</li>
+        <li>Clique em <b>Commit changes</b>. O painel atualiza em cerca de 1 minuto.</li>
+      </ol>
+      <p class="msg" id="f-msg" role="status"></p>
+    </div>
+    <div class="panel" aria-labelledby="t-hist">
+      <h2 id="t-hist">Histórico</h2>
+      <div class="tablewrap" id="hist"><p class="empty">Carregando…</p></div>
+    </div>
+  </section>
+</div>
+
+<script>
+(function () {
+  const PEOPLE = {
+    re:  { nome: "Rê",  cor: "var(--re)" },
+    abe: { nome: "Abê", cor: "var(--abe)" }
+  };
+  const ORDER = ["re", "abe"];
+  const state = { rows: [], loaded: false, db: null, canWrite: true, pendingDelete: null };
+
+  const $ = (id) => document.getElementById(id);
+  const fmt = (n, d = 2) => n.toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d });
+  const signed = (n, d = 2) => (n > 0 ? "+" : n < 0 ? "−" : "") + fmt(Math.abs(n), d);
+  const toT = (iso) => { const [y, m, d] = iso.split("-").map(Number); return Date.UTC(y, m - 1, d); };
+  const ddmm = (iso) => { const [, m, d] = iso.split("-"); return d + "/" + m; };
+  const todayISO = () => { const n = new Date(); return n.getFullYear() + "-" + String(n.getMonth() + 1).padStart(2, "0") + "-" + String(n.getDate()).padStart(2, "0"); };
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+  function deltaHTML(v, unit = " kg", extra = "") {
+    const r = Math.round(v * 100) / 100;
+    const cls = r < 0 ? "down" : r > 0 ? "up" : "flat";
+    const icon = r < 0 ? "▼" : r > 0 ? "▲" : "●";
+    const word = r < 0 ? "perdeu" : r > 0 ? "ganhou" : "estável";
+    return `<span class="delta ${cls}" title="${word}"><span aria-hidden="true">${icon}</span>${fmt(Math.abs(r))}${unit}${extra}</span>`;
+  }
+
+  function series() {
+    const out = {};
+    for (const k of ORDER) out[k] = [];
+    for (const r of state.rows) {
+      if (!out[r.pessoa] || typeof r.kg !== "number" || !/^\d{4}-\d{2}-\d{2}$/.test(r.data || "")) continue;
+      out[r.pessoa].push({ id: r.id, data: r.data, t: toT(r.data), kg: r.kg });
+    }
+    for (const k of ORDER) out[k].sort((a, b) => a.t - b.t);
+    return out;
+  }
+
+  /* ---------- Cards ---------- */
+  function renderCards(S) {
+    const duo = $("duo");
+    if (!state.loaded) return;
+    let total = 0, any = false;
+    duo.innerHTML = ORDER.map((k) => {
+      const p = PEOPLE[k], pts = S[k];
+      if (!pts.length) return `<article class="card"><div class="who"><span class="dot" style="background:${p.cor}"></span>${p.nome}</div><p class="empty">Nenhuma pesagem ainda. Registre a primeira abaixo.</p></article>`;
+      const first = pts[0], last = pts[pts.length - 1], prev = pts[pts.length - 2];
+      const d = last.kg - first.kg; total += d; any = true;
+      const pct = first.kg ? (d / first.kg) * 100 : 0;
+      const min = pts.reduce((a, b) => (b.kg < a.kg ? b : a));
+      return `<article class="card">
+        <div class="who"><span class="dot" style="background:${p.cor}"></span>${p.nome}<span class="since">desde ${ddmm(first.data)} · ${fmt(first.kg)} kg</span></div>
+        <div class="kg">${fmt(last.kg)}<small>kg</small></div>
+        <div>${deltaHTML(d, " kg", ` <span class="pct">(${signed(pct, 1)}%) desde o início</span>`)}</div>
+        <div class="chart" data-person="${k}"></div>
+        <div class="facts">
+          <div class="fact"><div class="l">Última · ${ddmm(last.data)}</div><div class="v">${prev ? deltaHTML(last.kg - prev.kg) + ` <span style="color:var(--muted);font-weight:500;font-size:13px">vs ${ddmm(prev.data)}</span>` : "primeira pesagem"}</div></div>
+          <div class="fact"><div class="l">Menor peso</div><div class="v">${fmt(min.kg)} kg <span style="color:var(--muted);font-weight:500;font-size:13px">em ${ddmm(min.data)}</span></div></div>
+        </div>
+      </article>`;
+    }).join("");
+    const tv = document.querySelector("#together .val");
+    tv.innerHTML = any ? deltaHTML(total).replace('class="delta', 'style="font-size:inherit" class="delta') : "—";
+    duo.querySelectorAll(".chart[data-person]").forEach((el) => {
+      const k = el.dataset.person;
+      drawChart(el, [{ key: k, nome: PEOPLE[k].nome, cor: PEOPLE[k].cor, pts: S[k].map((p) => ({ data: p.data, t: p.t, v: p.kg, kg: p.kg })) }], { h: 150, mode: "abs" });
+    });
+  }
+
+  /* ---------- Chart ---------- */
+  function niceStep(range) {
+    const steps = [0.1, 0.2, 0.25, 0.5, 1, 2, 5, 10];
+    const raw = range / 4;
+    return steps.find((s) => s >= raw) || 10;
+  }
+
+  function drawChart(el, list, opts) {
+    const W = Math.max(280, el.clientWidth || 600);
+    const H = opts.h;
+    const delta = opts.mode === "delta";
+    const m = { l: 48, r: delta ? 70 : 16, t: 14, b: 30 };
+    const all = list.flatMap((s) => s.pts);
+    if (!all.length) { el.innerHTML = `<p class="empty">Sem dados para mostrar.</p>`; return; }
+    let t0 = Math.min(...all.map((p) => p.t)), t1 = Math.max(...all.map((p) => p.t));
+    if (t0 === t1) { t0 -= 86400000; t1 += 86400000; }
+    let v0 = Math.min(...all.map((p) => p.v)), v1 = Math.max(...all.map((p) => p.v));
+    if (delta) { v0 = Math.min(v0, 0); v1 = Math.max(v1, 0); }
+    if (v1 - v0 < 0.4) { const c = (v0 + v1) / 2; v0 = c - 0.2; v1 = c + 0.2; }
+    const step = niceStep(v1 - v0);
+    v0 = Math.floor(v0 / step - 1e-9) * step; v1 = Math.ceil(v1 / step + 1e-9) * step;
+    const X = (t) => m.l + ((t - t0) / (t1 - t0)) * (W - m.l - m.r);
+    const Y = (v) => m.t + (1 - (v - v0) / (v1 - v0)) * (H - m.t - m.b);
+    const dec = step < 1 ? (step < 0.5 && step !== 0.25 ? 1 : 2) : 0;
+
+    let g = "";
+    for (let v = v0; v <= v1 + 1e-9; v += step) {
+      const y = Y(v).toFixed(1), zero = delta && Math.abs(v) < 1e-9;
+      g += `<line x1="${m.l}" x2="${W - m.r}" y1="${y}" y2="${y}" stroke="${zero ? "var(--axis)" : "var(--grid)"}" stroke-width="1"/>`;
+      g += `<text x="${m.l - 8}" y="${y}" dy="0.35em" text-anchor="end" font-size="12" fill="var(--muted)" style="font-variant-numeric:tabular-nums">${delta ? signed(v, dec) : fmt(v, dec)}</text>`;
+    }
+    const dates = [...new Map(all.map((p) => [p.t, p.data])).entries()].sort((a, b) => a[0] - b[0]);
+    const every = Math.max(1, Math.ceil(dates.length / Math.floor((W - m.l - m.r) / 52)));
+    dates.forEach(([t, d], i) => {
+      if (i % every && i !== dates.length - 1) return;
+      g += `<text x="${X(t).toFixed(1)}" y="${H - 8}" text-anchor="middle" font-size="12" fill="var(--muted)">${ddmm(d)}</text>`;
+    });
+
+    let marks = "", labels = [];
+    for (const s of list) {
+      if (!s.pts.length) continue;
+      const d = s.pts.map((p, i) => (i ? "L" : "M") + X(p.t).toFixed(1) + " " + Y(p.v).toFixed(1)).join(" ");
+      marks += `<path d="${d}" fill="none" stroke="${s.cor}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+      s.pts.forEach((p, i) => {
+        const last = i === s.pts.length - 1;
+        marks += `<circle cx="${X(p.t).toFixed(1)}" cy="${Y(p.v).toFixed(1)}" r="${last ? 5 : 4}" fill="${s.cor}" stroke="var(--surface)" stroke-width="2"/>`;
+      });
+      const lp = s.pts[s.pts.length - 1];
+      labels.push({ x: X(lp.t), y: Y(lp.v), s, p: lp });
+    }
+    if (delta) {
+      labels.sort((a, b) => a.y - b.y);
+      for (let i = 1; i < labels.length; i++) if (labels[i].y - labels[i - 1].y < 36) labels[i].y = labels[i - 1].y + 36;
+      for (const L of labels) {
+        marks += `<text x="${L.x + 10}" y="${L.y - 4}" font-size="13" font-weight="700" fill="var(--ink)">${esc(L.s.nome)}</text>`;
+        marks += `<text x="${L.x + 10}" y="${L.y + 12}" font-size="13" fill="var(--ink-2)" style="font-variant-numeric:tabular-nums">${signed(L.p.v)} kg</text>`;
+      }
+    }
+
+    el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${esc(opts.aria || "Gráfico de peso")}">
+      ${g}<line class="xh" x1="0" x2="0" y1="${m.t}" y2="${H - m.b}" stroke="var(--axis)" stroke-width="1" visibility="hidden"/>
+      ${marks}<rect class="hit" x="${m.l}" y="0" width="${W - m.l - m.r + (delta ? 0 : 8)}" height="${H}" fill="transparent"/>
+    </svg><div class="tip" hidden></div>`;
+
+    const svg = el.querySelector("svg"), tip = el.querySelector(".tip"), xh = el.querySelector(".xh");
+    const move = (ev) => {
+      const r = svg.getBoundingClientRect();
+      const px = ((ev.clientX - r.left) / r.width) * W;
+      let best = dates[0];
+      for (const d of dates) if (Math.abs(X(d[0]) - px) < Math.abs(X(best[0]) - px)) best = d;
+      const x = X(best[0]);
+      xh.setAttribute("x1", x); xh.setAttribute("x2", x); xh.setAttribute("visibility", "visible");
+      const rows = list.map((s) => {
+        const p = s.pts.find((q) => q.t === best[0]);
+        if (!p) return "";
+        const val = delta ? `${signed(p.v)} kg <span style="color:var(--muted)">(${fmt(p.kg)})</span>` : `${fmt(p.kg)} kg`;
+        return `<div class="row"><span><span class="dot" style="width:8px;height:8px;background:${s.cor}"></span>${esc(s.nome)}</span><span>${val}</span></div>`;
+      }).join("");
+      tip.innerHTML = `<b>${ddmm(best[1])}</b>${rows || '<div class="row"><span>Sem pesagem</span></div>'}`;
+      tip.hidden = false;
+      const sx = (x / W) * r.width, tw = tip.offsetWidth;
+      tip.style.left = Math.min(Math.max(0, sx + 12 + tw > r.width ? sx - tw - 12 : sx + 12), Math.max(0, r.width - tw)) + "px";
+      tip.style.top = "4px";
+    };
+    const leave = () => { tip.hidden = true; xh.setAttribute("visibility", "hidden"); };
+    const hit = el.querySelector(".hit");
+    hit.addEventListener("pointermove", move);
+    hit.addEventListener("pointerdown", move);
+    hit.addEventListener("pointerleave", leave);
+  }
+
+  function renderVar(S) {
+    const el = $("chart-var");
+    $("legend").innerHTML = ORDER.map((k) => `<span><i style="background:${PEOPLE[k].cor}"></i>${PEOPLE[k].nome}</span>`).join("");
+    if (!state.loaded) { el.innerHTML = `<p class="empty">Carregando…</p>`; return; }
+    const list = ORDER.map((k) => {
+      const pts = S[k], base = pts.length ? pts[0].kg : 0;
+      return { key: k, nome: PEOPLE[k].nome, cor: PEOPLE[k].cor, pts: pts.map((p) => ({ data: p.data, t: p.t, v: Math.round((p.kg - base) * 100) / 100, kg: p.kg })) };
+    });
+    drawChart(el, list, { h: 300, mode: "delta", aria: "Variação de peso de Rê e Abê desde a primeira pesagem" });
+  }
+
+  /* ---------- History ---------- */
+  function renderHist(S) {
+    const el = $("hist");
+    if (!state.loaded) return;
+    const rows = [];
+    for (const k of ORDER) S[k].forEach((p, i) => rows.push({ ...p, k, prev: i ? S[k][i - 1] : null }));
+    rows.sort((a, b) => b.t - a.t || ORDER.indexOf(a.k) - ORDER.indexOf(b.k));
+    if (!rows.length) { el.innerHTML = `<p class="empty">Nenhuma pesagem registrada ainda.</p>`; return; }
+    el.innerHTML = `<table><thead><tr><th>Data</th><th>Pessoa</th><th class="num">Peso</th><th class="num">vs anterior</th>${state.canWrite ? "<th></th>" : ""}</tr></thead><tbody>${
+      rows.map((r) => `<tr>
+        <td>${ddmm(r.data)}/${r.data.slice(2, 4)}</td>
+        <td><span class="who"><span class="dot" style="background:${PEOPLE[r.k].cor}"></span>${PEOPLE[r.k].nome}</span></td>
+        <td class="num">${fmt(r.kg)} kg</td>
+        <td class="num">${r.prev ? deltaHTML(r.kg - r.prev.kg) : '<span style="color:var(--muted)">início</span>'}</td>
+        ${state.canWrite ? `<td class="num"><button class="x${state.pendingDelete === r.id ? " confirm" : ""}" data-del="${esc(r.id)}" type="button">${state.pendingDelete === r.id ? "Confirmar remoção" : "Remover"}</button></td>` : ""}
+      </tr>`).join("")
+    }</tbody></table>`;
+  }
+
+  function render() {
+    const S = series();
+    renderCards(S); renderVar(S); renderHist(S);
+  }
+
+  /* ---------- Data ---------- */
+  const msg = (t, cls) => { const m = $("f-msg"); m.textContent = t; m.className = "msg " + (cls || ""); };
+  state.canWrite = false;
+
+  let rt;
+  window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(render, 120); });
+
+  render();
+
+  fetch("pesagens.json?v=" + Date.now(), { cache: "no-store" })
+    .then((r) => { if (!r.ok) throw new Error("http " + r.status); return r.text(); })
+    .then((txt) => {
+      let json;
+      try { json = JSON.parse(txt); }
+      catch (e) { throw { tipo: "json", detalhe: e.message }; }
+      const lista = Array.isArray(json) ? json : (json.pesagens || []);
+      state.rows = lista.map((r, i) => ({ id: String(i), pessoa: String(r.pessoa || "").toLowerCase(), data: r.data, kg: Number(r.kg) }));
+      state.loaded = true;
+      render();
+    })
+    .catch((err) => {
+      state.loaded = true;
+      render();
+      const texto = err && err.tipo === "json"
+        ? "O arquivo pesagens.json tem um erro de digitação (confira vírgulas e aspas). Detalhe: " + err.detalhe
+        : "Não consegui ler o pesagens.json. Abra o painel pelo endereço do GitHub Pages, não com duplo clique no arquivo.";
+      $("duo").innerHTML = `<div class="card"><p class="empty">${esc(texto)}</p></div>`;
+      msg(texto, "err");
+    });
+})();
+</script>
+</body>
+</html>
